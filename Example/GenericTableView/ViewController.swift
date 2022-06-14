@@ -15,7 +15,7 @@ class ViewController: UIViewController {
         }
         var data:[HorizontalSample1.Config] = []
         for i in 0...Int.random(in: 5...10) {
-            data.append(.init(id: i, name: "name \(i)", onClick: onClick))
+            data.append(.init(id: i, name: Bool.random() ? "Title \(i)" : "Title horizontal \(i)", onClick: onClick))
         }
         
         let section:GenericTableSection<HorizontalSample1.Config> = .init(config: .init(headerView: nil, data: data, animationType: .auto, orientation: .horizontal(.init(height: 100)) ))
