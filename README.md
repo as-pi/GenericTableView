@@ -4,6 +4,8 @@
 
 Swift iOs TableView kit for simple work with UITableView. It supports horizontal and vertical cells, all cells support self-sizing. 
 
+![til](https://raw.githubusercontent.com/as-pi/GenericTableView/master/Example/ezgif-3-a9bf5917eb.gif)
+
 Example of usage also provided
 
 ### Installing from Xcode
