@@ -16,12 +16,11 @@ class CustomCollectionView:UICollectionView {
     weak var tableView:UITableView?
     
     func reloadDataAfterResize() {
-        (tableView as? GenericTableView.CustomTableView)?.beginUpdates()
         UIView.performWithoutAnimation {
+            tableView?.beginUpdates()
             (collectionViewLayout as? UICollectionViewFlowLayout)?.invalidateLayout()
-            
+            tableView?.endUpdates()
         }
-        (tableView as? GenericTableView.CustomTableView)?.endUpdates()
         
     }
 }
