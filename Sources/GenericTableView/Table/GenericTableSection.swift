@@ -218,14 +218,11 @@ public class GenericTableSection<T:GenericTableDataEquatable>:GenericTableSectio
             var cell = tableView.dequeueReusableCell(withIdentifier: identifier)
             if (cell == nil) {
                 cell = config.data[row].createNewCell()
-                
                 (cell as? GenericCellProtocol)?.updateWidth(width: tableView.frame.size.width)
                 if let c = cell {
                     tableView.register(type(of: c), forCellReuseIdentifier: identifier)
                 }
-                
             }
-            
             (cell as? GenericTableDataCellProtocol)?.updateDataInCell(data: config.data[row])
             return cell
         }
@@ -352,14 +349,22 @@ public class GenericTableSection<T:GenericTableDataEquatable>:GenericTableSectio
                         let num:Int = self.getCurrentSectionNum()
                         
                         var actions:[((UITableView) -> Void)] = []
-                        if (updates.hasMainUpdates) {
-                            actions.append({tableView in
-                                updates.createUpdateAction(tableView: tableView, sectionNo: num)
-                            })
-                        }
+                        
                         if (updates.hasReloadUpdates) {
                             actions.append({tableView in
                                 updates.createReloadAction(tableView: tableView, sectionNo: num)
+                            })
+                        }
+                        
+                        if (updates.hasMoveUpdates) {
+                            actions.append({tableView in
+                                updates.createMoveAction(tableView: tableView, sectionNo: num)
+                            })
+                        }
+                        
+                        if (updates.hasMainUpdates) {
+                            actions.append({tableView in
+                                updates.createUpdateAction(tableView: tableView, sectionNo: num)
                             })
                         }
                         
@@ -451,7 +456,10 @@ private class TableViewUpdates {
         return (toDelete.hasUpdates || toInsert.hasUpdates || toMove.count > 0 || toReload.hasUpdates)
     }
     var hasMainUpdates:Bool {
-        return (toDelete.hasUpdates || toInsert.hasUpdates || toMove.count > 0)
+        return (toDelete.hasUpdates || toInsert.hasUpdates)
+    }
+    var hasMoveUpdates:Bool {
+        return (toMove.count > 0)
     }
     var hasReloadUpdates:Bool {
         return toReload.hasUpdates
@@ -465,9 +473,9 @@ private class TableViewUpdates {
     }
     private func createUpdates() {
         
-        var newDataIndex:[Int] = []
-        var toDeleteIndex:[Int] = []
-        var toReloadIndex:[Int] = []
+        var newDataIndex:Set<Int> = .init()
+        var toDeleteIndex:Set<Int> = .init()
+        var toReloadIndex:Set<Int> = .init()
         var toMoveIndex:[(Int, Int)] = []// from - to
         
         for (index, item) in oldData.enumerated() { // поиск перемещений и удаления
@@ -476,33 +484,28 @@ private class TableViewUpdates {
                     toMoveIndex.append((index, newItemIndex))
                 }
             } else {
-                toDeleteIndex.append(index)
+                toDeleteIndex.insert(index)
             }
         }
         for (index, item) in newData.enumerated() { // поиск новых элементов
             if let _ = oldData.firstIndex(where: {$0.isEqual(item)}) {
                 
             } else {
-                newDataIndex.append(index)
+                newDataIndex.insert(index)
             }
         }
         
-        toReloadIndex.append(contentsOf: toDeleteIndex.filter({newDataIndex.contains($0)}))
+        toDeleteIndex.filter({newDataIndex.contains($0)}).forEach({
+            toReloadIndex.insert($0)
+        })
         
-        toDeleteIndex.removeAll(where: {toReloadIndex.contains($0)})
-        newDataIndex.removeAll(where: {toReloadIndex.contains($0)})
+        toDeleteIndex.filter {toReloadIndex.contains($0)}.forEach({toDeleteIndex.remove($0)})
+        newDataIndex.filter {toReloadIndex.contains($0)}.forEach({newDataIndex.remove($0)})
         
-//            print("toReloadIndex:\(toReloadIndex)")
-//            print("toDeleteIndex:\(toDeleteIndex)")
-//            print("newDataIndex:\(newDataIndex)")
-//            print("toMove:\(toMove)")
+        toDelete = TableViewUpdateWithDirection(oldData: oldData, newData: newData, toUpdateIndexItemArray: .init(toDeleteIndex))
+        toInsert = TableViewUpdateWithDirection(oldData: oldData, newData: newData, toUpdateIndexItemArray: .init(newDataIndex))
+        toReload = TableViewUpdateWithDirection(oldData: oldData, newData: newData, toUpdateIndexItemArray: .init(toReloadIndex))
         
-//            toReloadIndex = []
-        
-        toDelete = TableViewUpdateWithDirection(oldData: oldData, newData: newData, toUpdateIndexItemArray: toDeleteIndex)
-        toInsert = TableViewUpdateWithDirection(oldData: oldData, newData: newData, toUpdateIndexItemArray: newDataIndex)
-        toReload = TableViewUpdateWithDirection(oldData: oldData, newData: newData, toUpdateIndexItemArray: toReloadIndex)
-//            toDelete = TableViewUpdateWithDirection(oldData: oldData, newData: newData, toUpdateIndexItemArray: toDeleteIndex)
         toMove = toMoveIndex
         
     }
@@ -533,25 +536,28 @@ private class TableViewUpdates {
         if let set = toDelete.bottomIndexSet {
             tableView.deleteRows(at: set.convertToRows(section: sectionNo), with: animationType.getAnimationType(animation: .bottom))
         }
-        
+    }
+    
+    func createMoveAction(tableView:UITableView, sectionNo:Int) {
         if (toMove.count > 0) {
             for item in toMove {
                 tableView.moveRow(at: IndexPath(item: item.0, section: sectionNo), to: IndexPath(item: item.1, section: sectionNo))
             }
         }
     }
+    
     func createReloadAction(tableView:UITableView, sectionNo:Int) {
         if let set = toReload.topIndexSet {
-            tableView.reloadRows(at: set.convertToRows(section: sectionNo), with: animationType.getAnimationType(animation: .none))
+            tableView.reloadRows(at: set.convertToRows(section: sectionNo), with: animationType.getAnimationType(animation: .middle))
         }
         if let set = toReload.rightIndexSet {
-            tableView.reloadRows(at: set.convertToRows(section: sectionNo), with: animationType.getAnimationType(animation: .none))
+            tableView.reloadRows(at: set.convertToRows(section: sectionNo), with: animationType.getAnimationType(animation: .middle))
         }
         if let set = toReload.leftIndexSet {
-            tableView.reloadRows(at: set.convertToRows(section: sectionNo), with: animationType.getAnimationType(animation: .none))
+            tableView.reloadRows(at: set.convertToRows(section: sectionNo), with: animationType.getAnimationType(animation: .middle))
         }
         if let set = toReload.bottomIndexSet {
-            tableView.reloadRows(at: set.convertToRows(section: sectionNo), with: animationType.getAnimationType(animation: .none))
+            tableView.reloadRows(at: set.convertToRows(section: sectionNo), with: animationType.getAnimationType(animation: .middle))
         }
     }
 }
