@@ -5,7 +5,7 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/as-pi/GenericTableView",
       "state" : {
-        "revision" : "384544ea3974f6c414031b9903599bda096e4ecf",
+        "revision" : "a0449cf51522fac962f0fb0909d9ebb3aa94e074",
         "version" : "0.0.1"
       }
     }
