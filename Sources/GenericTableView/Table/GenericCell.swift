@@ -91,9 +91,9 @@ public class GenericCell<E, T:GenericViewXib<E>>:UITableViewCell, GenericCellPro
     }
     
     func updateWidth(width: CGFloat) {
-        
-        self.contentView.frame.size.width = width
-        
+        if self.contentView.frame.width != width {
+            self.contentView.frame.size.width = width
+        }
     }
     
     private func setup() {

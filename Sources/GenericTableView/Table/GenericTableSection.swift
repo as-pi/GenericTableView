@@ -218,11 +218,12 @@ public class GenericTableSection<T:GenericTableDataEquatable>:GenericTableSectio
             var cell = tableView.dequeueReusableCell(withIdentifier: identifier)
             if (cell == nil) {
                 cell = config.data[row].createNewCell()
-                (cell as? GenericCellProtocol)?.updateWidth(width: tableView.frame.size.width)
                 if let c = cell {
                     tableView.register(type(of: c), forCellReuseIdentifier: identifier)
                 }
             }
+            (cell as? GenericCellProtocol)?.updateWidth(width: tableView.frame.size.width)
+            
             (cell as? GenericTableDataCellProtocol)?.updateDataInCell(data: config.data[row])
             return cell
         }
