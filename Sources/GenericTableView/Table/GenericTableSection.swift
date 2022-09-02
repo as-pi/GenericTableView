@@ -107,11 +107,12 @@ public enum SectionOrientation {
 
 public class HorizontalSectionOrientationConfig {
     
-    public init(height: CGFloat, inset: UIEdgeInsets? = nil) {
+    public init(height: CGFloat, inset: UIEdgeInsets? = nil, interitemSpace:CGFloat = 0) {
         self.height = height
         self.inset = inset
+        self.interitemSpace = interitemSpace
     }
-    
+    let interitemSpace:CGFloat
     let height:CGFloat
     let inset:UIEdgeInsets?
     var dataSection:GenericTableSection<GenericTableHorizontalSection.Config>!

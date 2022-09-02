@@ -187,7 +187,7 @@ public class GenericTableView:UIView, UITableViewDelegate, UITableViewDataSource
                     let tableViewFn:(() -> UITableView?) = {[weak section] in
                         return section?.configFromTable?.tableView?()
                     }
-                    let testSection:GenericTableSection<GenericTableHorizontalSection.Config> = .init(config: .init(headerView: nil, data: [.init(section: section, tableViewFn: tableViewFn, height: config.height, inset: config.inset)], animationType: .auto))
+                    let testSection:GenericTableSection<GenericTableHorizontalSection.Config> = .init(config: .init(headerView: nil, data: [.init(section: section, tableViewFn: tableViewFn, height: config.height, interitemSpace: config.interitemSpace, inset: config.inset)], animationType: .auto))
                     config.dataSection = testSection
                     return testSection
                 } else {

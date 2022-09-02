@@ -37,13 +37,15 @@ class GenericTableHorizontalSection:GenericViewXib<GenericTableHorizontalSection
     private var returnedItemsCount:Int? 
     
     public class Config {
-        public init(section: GenericTableSectionProtocol, tableViewFn: (() -> UITableView?)?, height:CGFloat = 150, inset:UIEdgeInsets? = nil) {
+        public init(section: GenericTableSectionProtocol, tableViewFn: (() -> UITableView?)?, height:CGFloat = 150, interitemSpace:CGFloat, inset:UIEdgeInsets? = nil) {
             self.section = section
             self.height = height
             self.inset = inset
             self.tableViewFn = tableViewFn
+            self.interitemSpace = interitemSpace
         }
         let tableViewFn:(() -> UITableView?)?
+        let interitemSpace:CGFloat
         let height:CGFloat
         let section:GenericTableSectionProtocol
         let inset:UIEdgeInsets?
@@ -118,6 +120,10 @@ class GenericTableHorizontalSection:GenericViewXib<GenericTableHorizontalSection
     public override func configure(data: Config) {
         data.updateDataMethod = {[weak self] data in return self?.needUpdateData(data: data) ?? false}
         collectionView.tableView = data.tableViewFn?()
+        if let layout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout {
+            layout.minimumInteritemSpacing = data.interitemSpace
+            layout.minimumLineSpacing = data.interitemSpace
+        }
         var needReload:Bool = true
         if firstInit {
             self.collectionView.register(.init(nibName: "\(GenericTableCollectionViewCell.self)", bundle: .module), forCellWithReuseIdentifier: data.getCellReuseIdentifier())
