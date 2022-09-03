@@ -27,16 +27,17 @@ class CustomCollectionView:UICollectionView {
 
 class GenericTableHorizontalSection:GenericViewXib<GenericTableHorizontalSection.Config> {
     
+    @IBOutlet var parentView: UIView!
     @IBOutlet weak var heightConstraint: NSLayoutConstraint!
+    
     public override class var bundle: Bundle {
         return .module
     }
-    @IBOutlet weak var collectionView: CustomCollectionView!
     
-    var firstInit:Bool = true
-    private var returnedItemsCount:Int? 
+    private weak var collectionView: CustomCollectionView! {return self.data.collectionView}
     
-    public class Config {
+    
+    public class Config:NSObject {
         public init(section: GenericTableSectionProtocol, tableViewFn: (() -> UITableView?)?, height:CGFloat = 150, interitemSpace:CGFloat, inset:UIEdgeInsets? = nil) {
             self.section = section
             self.height = height
@@ -51,24 +52,62 @@ class GenericTableHorizontalSection:GenericViewXib<GenericTableHorizontalSection
         let inset:UIEdgeInsets?
         var scrollContentOffset:CGPoint?
         
+        fileprivate weak var collectionView:CustomCollectionView?
+        
         var updateDataMethod:(([GenericTableDataEquatable]) -> Bool)?
     }
     
-    public override func setupIfNeeded() {
+    private func createCollectionView() {
+        guard parentView.subviews.count == 0, let data = self.data else {return}
         
-        collectionView.delegate = self
+        if !alreadyLayouted {
+            self.setNeedsLayout()
+            self.layoutIfNeeded()
+        }
         
-        collectionView.dataSource = self
-        collectionView.scrollIndicatorInsets = .zero
-        collectionView.alwaysBounceVertical = false
-        collectionView.alwaysBounceHorizontal = true
-        collectionView.contentInset = .zero
+        if let collectionView = data.collectionView {
+            collectionView.removeFromSuperview()
+            
+            parentView.addSubview(collectionView)
+            
+        } else {
+            let layout:UICollectionViewFlowLayout = .init()
+            
+            if let inset = data.inset {
+                layout.sectionInset = inset
+            }
+            
+            layout.minimumInteritemSpacing = data.interitemSpace
+            layout.minimumLineSpacing = data.interitemSpace
+            layout.estimatedItemSize = .zero
+            layout.scrollDirection = .horizontal
+            
+            let collectionView:CustomCollectionView = .init(frame: .init(origin: .zero, size: .init(width: self.frame.width, height: data.height + (data.inset?.top ?? 0) + (data.inset?.bottom ?? 0))), collectionViewLayout: layout)
+            
+            collectionView.backgroundColor = .clear
+            
+            collectionView.delegate = data
+            
+            collectionView.dataSource = data
+            
+            collectionView.scrollIndicatorInsets = .zero
+            collectionView.alwaysBounceVertical = false
+            collectionView.alwaysBounceHorizontal = true
+            collectionView.contentInset = .zero
+            
+            collectionView.showsVerticalScrollIndicator = false
+            collectionView.showsHorizontalScrollIndicator = false
+            
+            collectionView.register(.init(nibName: "\(GenericTableCollectionViewCell.self)", bundle: .module), forCellWithReuseIdentifier: data.getCellReuseIdentifier())
+            
+            
+            collectionView.tableView = data.tableViewFn?()
+            
+            parentView.addSubview(collectionView)
+            
+            data.collectionView = collectionView
+        }
         
-        (collectionView.collectionViewLayout as? UICollectionViewFlowLayout)?.estimatedItemSize = .zero
-        
-        collectionView.setNeedsLayout()
-        collectionView.layoutIfNeeded()
-        collectionView.alpha = 0
     }
     
     private func updateData(dataOld: [GenericTableDataEquatable]?, dataNew: [GenericTableDataEquatable]) -> Bool {
@@ -107,38 +146,13 @@ class GenericTableHorizontalSection:GenericViewXib<GenericTableHorizontalSection
         return updateData(dataOld: self.data?.section.getItems(), dataNew: data)
     }
     
-//    private func getHeight() -> CGFloat {
-//        if self.data.section.getItemCount() > 0 {
-//            return data.height + (data.inset?.top ?? 0) + (data.inset?.bottom ?? 0)
-////            collectionView.alpha = 1
-//        } else {
-//            return 0
-////            collectionView.alpha = 0
-//        }
-//    }
-    
     public override func configure(data: Config) {
-        data.updateDataMethod = {[weak self] data in return self?.needUpdateData(data: data) ?? false}
-        collectionView.tableView = data.tableViewFn?()
-        if let layout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout {
-            layout.minimumInteritemSpacing = data.interitemSpace
-            layout.minimumLineSpacing = data.interitemSpace
-        }
-        var needReload:Bool = true
-        if firstInit {
-            self.collectionView.register(.init(nibName: "\(GenericTableCollectionViewCell.self)", bundle: .module), forCellWithReuseIdentifier: data.getCellReuseIdentifier())
-            
-            if let inset = data.inset {
-                (collectionView.collectionViewLayout as? UICollectionViewFlowLayout)?.sectionInset = inset
-            }
-            firstInit = false
-            needReload = false
-        } else {
-            
-        }
-        
-//        let oldData = self.data
         self.data = data
+        
+        createCollectionView()
+        
+        data.updateDataMethod = {[weak self] data in return self?.needUpdateData(data: data) ?? false}
+        
         
         if data.section.getItemCount() > 0 {
             heightConstraint.constant = data.height + (data.inset?.top ?? 0) + (data.inset?.bottom ?? 0)
@@ -147,69 +161,51 @@ class GenericTableHorizontalSection:GenericViewXib<GenericTableHorizontalSection
             heightConstraint.constant = 0
             collectionView.alpha = 0
         }
-//        heightConstraint.constant = getHeight()
         
-        setNeedsLayout()
-        layoutIfNeeded()
-        
-        if returnedItemsCount != self.data.section.getItemCount() {
-            let collectionView = self.collectionView
-            let offset = data.scrollContentOffset
-
-            DispatchQueue.main.async {
-                collectionView?.reloadData()
-                if let offset = offset {
-                    collectionView?.setContentOffset(offset, animated: false)
-                }
-            }
-        } else if let offset = data.scrollContentOffset {
+        if let offset = data.scrollContentOffset {
             collectionView?.setContentOffset(offset, animated: false)
         }
         
-//        updateData(dataOld: oldData, dataNew: data)
-        if needReload {
-            collectionView.reloadData()
-        }
     }
     
 }
 
-extension GenericTableHorizontalSection: UICollectionViewDelegateFlowLayout {
+extension GenericTableHorizontalSection.Config: UICollectionViewDelegateFlowLayout {
+
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        self.data.scrollContentOffset = scrollView.contentOffset
+        self.scrollContentOffset = scrollView.contentOffset
     }
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        if let size = GenericTableCollectionViewCell.CellSizes.getData(view: collectionView, indexPath: indexPath) {
-            return .init(width: size.width, height: self.data.height)
+        let size:CGSize
+        if let cellSize = GenericTableCollectionViewCell.CellSizes.getData(view: collectionView, indexPath: indexPath) {
+            size = .init(width: cellSize.width, height: self.height)
+            
+        } else {
+            size = .init(width: 1, height: 1)
         }
-        let size:CGSize = .init(width: collectionView.frame.size.width, height: self.data?.height ?? 33)
         return size
     }
 }
 
-extension GenericTableHorizontalSection:UICollectionViewDataSource {
+extension GenericTableHorizontalSection.Config: UICollectionViewDataSource{
     
     public func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell:UICollectionViewCell = collectionView.dequeueReusableCell(withReuseIdentifier: data.getCellReuseIdentifier(), for: indexPath)
-        if let data = data, indexPath.row < data.section.getItemCount() {
-            let inset = (collectionView.collectionViewLayout as? UICollectionViewFlowLayout)?.sectionInset
-            
-//            cell = collectionView.dequeueReusableCell(withReuseIdentifier: data.getCellReuseIdentifier(), for: indexPath)
-            
-            (cell as? GenericTableCollectionViewCell)?.configureCell(item: data.section.getItems()[indexPath.row], height: self.data.height - (inset?.top ?? 0) - (inset?.bottom ?? 0), collectionView: collectionView, indexPath: indexPath)
-        } else {
-            
-        }
+        let cell:UICollectionViewCell = collectionView.dequeueReusableCell(withReuseIdentifier: getCellReuseIdentifier(), for: indexPath)
+        
+        let inset = (collectionView.collectionViewLayout as? UICollectionViewFlowLayout)?.sectionInset
+        
+        (cell as? GenericTableCollectionViewCell)?.configureCell(item: self.section.getItems()[indexPath.row], height: self.height - (inset?.top ?? 0) - (inset?.bottom ?? 0), collectionView: collectionView, indexPath: indexPath)
+        
         return cell
     }
     
     public func numberOfSections(in collectionView: UICollectionView) -> Int {
-        self.data == nil ? 0 : 1
+        return 1
     }
     
     public func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        returnedItemsCount = self.data?.section.getItemCount() ?? 0
-        let count:Int = returnedItemsCount ?? 0
+
+        let count:Int = self.section.getItemCount()
         let alpha:CGFloat = count == 0 ? 0 : 1
         
         if collectionView.alpha != alpha {
@@ -241,7 +237,6 @@ extension GenericTableHorizontalSection.Config: GenericTableDataEquatable {
     
     public func isViewHidden() -> Bool {
         return section.getItemCount() == 0
-//        return false
     }
     
     public func isEqual(_ to: GenericTableDataEquatable) -> Bool {
