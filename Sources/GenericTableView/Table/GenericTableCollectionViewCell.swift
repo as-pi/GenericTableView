@@ -9,6 +9,8 @@
 import UIKit
 
 class GenericTableCollectionViewCell: UICollectionViewCell {
+    private var viewCellReuseIdentifier:String?
+    
     private var isConstraintSetted:Bool = false
     class CellSizes {
         private var workItem:DispatchWorkItem?
@@ -123,6 +125,12 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
     
     func configureCell(item:GenericTableDataEquatable, height:CGFloat, collectionView:UICollectionView, indexPath:IndexPath) {
         
+        if self.viewCellReuseIdentifier == item.getCellReuseIdentifier(), let view = contentView.subviews.first as? CustomView, let prevCellView = view.subviews.first(where: {$0 as? GenericTableDataCellProtocol != nil}) as? GenericTableDataCellProtocol {
+            view.indexPath = indexPath
+            prevCellView.updateDataInCell(data: item)
+            return
+        }
+        
         let cell = item.createNewCell()
         
         cell.alpha = 0
@@ -199,6 +207,7 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
         customView.setNeedsLayout()
         customView.layoutIfNeeded()
         
+        self.viewCellReuseIdentifier = item.getCellReuseIdentifier()
     }
     
 }
