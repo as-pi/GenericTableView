@@ -55,7 +55,7 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
             return cell?.hasSize(indexPath: indexPath) ?? false
         }
         
-        static func addData(view:UICollectionView, indexPath:IndexPath, size:CGSize) -> Bool {
+        static func addData(view:UICollectionView, contentView: UIView, indexPath:IndexPath, size:CGSize) {
             
             let cell:CellSizes = queue.sync {
                 if let cell = Self.cellSizes.object(forKey: view) {
@@ -66,39 +66,15 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
                     return cell
                 }
             }
-            let result = cell.addData(indexPath: indexPath, size: size)
-            if !result {
+            _ = cell.addData(indexPath: indexPath, size: size)
+            
+            if contentView.frame.size.width != size.width {
                 
-                if cell.isFirstLoad {
-                    view.alpha = 0
-                    UIView.performWithoutAnimation {
-                        view.reloadItems(at: [indexPath])
-                    }
-                    
-                    let item:DispatchWorkItem = .init(block: {[weak cell, weak view] in
-                        cell?.isFirstLoad = false
-                        
-                        (view as? CustomCollectionView)?.reloadDataAfterResize()
-                        UIView.performWithoutAnimation {
-                            view?.alpha = 1
-                        }
-                    })
-                    
-                    updateViewQueue.sync {
-                        cell.workItem?.cancel()
-                        cell.workItem = item
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: item)
-                    }
-                } else {
-                    DispatchQueue.main.async {[weak view] in
-                        UIView.performWithoutAnimation {
-                            view?.reloadItems(at: [indexPath])
-                        }
-                    }
+                UIView.performWithoutAnimation {
+                    view.reloadItems(at: [indexPath])
                 }
-                
             }
-            return result
+            
         }
         
         static func getData(view:UICollectionView, indexPath:IndexPath) -> CGSize? {
@@ -151,15 +127,14 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
         } else {
             let newView:CustomView = .init(frame: .zero)
             newView.indexPath = indexPath
-            newView.alpha = 0
+            
             newView.translatesAutoresizingMaskIntoConstraints = false
             
-            newView.afterLayoutFn = {[weak collectionView] (view, indexPath) in
+            newView.afterLayoutFn = {[weak collectionView, weak contentView, weak view] (_, indexPath) in
                 
-                guard let collectionView = collectionView, let size = view.subviews.last?.frame.size, let indexPath = indexPath else {return}
+                guard let collectionView = collectionView, let contentView = contentView, let size = view?.frame.size, let indexPath = indexPath else {return}
                 
-                _ = CellSizes.addData(view: collectionView, indexPath: indexPath, size: size)
-                view.alpha = 1
+                CellSizes.addData(view: collectionView, contentView: contentView, indexPath: indexPath, size: size)
             }
             contentView.addSubview(newView)
             newView.isUserInteractionEnabled = true
@@ -204,10 +179,8 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
             constraint.isActive = true
         }
         
-        customView.setNeedsLayout()
-        customView.layoutIfNeeded()
-        
         self.viewCellReuseIdentifier = item.getCellReuseIdentifier()
+        
     }
     
 }

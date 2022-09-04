@@ -15,14 +15,13 @@ protocol GenericTableHorizontalSectionProtocol {
 class CustomCollectionView:UICollectionView {
     weak var tableView:UITableView?
     
+    /*
     func reloadDataAfterResize() {
-        UIView.performWithoutAnimation {
-            tableView?.beginUpdates()
-            (collectionViewLayout as? UICollectionViewFlowLayout)?.invalidateLayout()
-            tableView?.endUpdates()
-        }
+        print("reloadDataAfterResize")
         
-    }
+        (collectionViewLayout as? UICollectionViewFlowLayout)?.invalidateLayout()
+        
+    }*/
 }
 
 class GenericTableHorizontalSection:GenericViewXib<GenericTableHorizontalSection.Config> {
