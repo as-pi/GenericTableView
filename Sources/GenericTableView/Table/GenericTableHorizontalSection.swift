@@ -193,7 +193,7 @@ extension GenericTableHorizontalSection.Config: UICollectionViewDataSource{
         
         let inset = (collectionView.collectionViewLayout as? UICollectionViewFlowLayout)?.sectionInset
         
-        (cell as? GenericTableCollectionViewCell)?.configureCell(item: self.section.getItems()[indexPath.row], height: self.height - (inset?.top ?? 0) - (inset?.bottom ?? 0), collectionView: collectionView, indexPath: indexPath)
+        (cell as? GenericTableCollectionViewCell)?.configureCell(item: self.section.getItems()[indexPath.row], height: self.height, collectionView: collectionView, indexPath: indexPath)
         
         return cell
     }
