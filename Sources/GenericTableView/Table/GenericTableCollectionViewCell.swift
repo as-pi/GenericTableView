@@ -171,6 +171,7 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
         }
         cell.frame.size.height = height
         
+        self.layer.masksToBounds = false
         self.viewCellReuseIdentifier = item.getCellReuseIdentifier()
         
     }
