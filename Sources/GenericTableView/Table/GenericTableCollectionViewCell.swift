@@ -157,9 +157,7 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
         if !isConstraintSetted {
             NSLayoutConstraint.activate([
                 view.leadingAnchor.constraint(equalTo: customView.leadingAnchor),
-                view.topAnchor.constraint(equalTo: customView.topAnchor),
-                cell.leadingAnchor.constraint(equalTo: customView.leadingAnchor),
-                cell.topAnchor.constraint(equalTo: customView.topAnchor)
+                view.topAnchor.constraint(equalTo: customView.topAnchor)
             ])
             isConstraintSetted = true
         }
@@ -168,16 +166,10 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
             viewHeightConstraint.constant = height - 0.5
         } else {
             let constraint = view.heightAnchor.constraint(equalToConstant: height - 0.5)
-            constraint.priority = UILayoutPriority(999)
+            constraint.priority = .required
             constraint.isActive = true
         }
-        if let viewHeightConstraint = cell.heightConstraint {
-            viewHeightConstraint.constant = height
-        } else {
-            let constraint = cell.heightAnchor.constraint(equalToConstant: height)
-            constraint.priority = UILayoutPriority(999)
-            constraint.isActive = true
-        }
+        cell.frame.size.height = height
         
         self.viewCellReuseIdentifier = item.getCellReuseIdentifier()
         
