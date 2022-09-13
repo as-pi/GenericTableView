@@ -111,15 +111,16 @@ class GenericTableHorizontalSection:GenericViewXib<GenericTableHorizontalSection
     
     private func updateData(dataOld: [GenericTableDataEquatable]?, dataNew: [GenericTableDataEquatable]) -> Bool {
         guard let dataOld = dataOld else {return false}
+        /*
         let itemsOld = dataOld
         let itemsNew = dataNew
-        if itemsOld.count != itemsNew.count || itemsOld.count == 0 || itemsNew.count == 0 {
-            return false
-        }
+//        if itemsOld.count != itemsNew.count || itemsOld.count == 0 || itemsNew.count == 0 {
+//            return false
+//        }
         
         var indexes:[Int] = []
         for (index,item) in itemsNew.enumerated() {
-            if !item.isEqual(itemsOld[index]) {
+            if  !item.isEqual(itemsOld[index]) {
                 indexes.append(index)
             }
         }
@@ -137,7 +138,12 @@ class GenericTableHorizontalSection:GenericViewXib<GenericTableHorizontalSection
         DispatchQueue.main.async {
             method()
         }
-        
+        */
+        let method = {[weak self] in UIView.performWithoutAnimation {self?.collectionView.reloadData()}}
+        DispatchQueue.main.async {
+            
+            method()
+        }
         return true
     }
     

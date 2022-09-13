@@ -104,6 +104,8 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
         if self.viewCellReuseIdentifier == item.getCellReuseIdentifier(), let view = contentView.subviews.first as? CustomView, let prevCellView = view.subviews.first(where: {$0 as? GenericTableDataCellProtocol != nil}) as? GenericTableDataCellProtocol {
             view.indexPath = indexPath
             prevCellView.updateDataInCell(data: item)
+            self.setNeedsLayout()
+            self.layoutIfNeeded()
             return
         }
         
