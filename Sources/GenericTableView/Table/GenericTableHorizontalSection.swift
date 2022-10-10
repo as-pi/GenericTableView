@@ -78,7 +78,7 @@ class GenericTableHorizontalSection:GenericViewXib<GenericTableHorizontalSection
             
             layout.minimumInteritemSpacing = data.interitemSpace
             layout.minimumLineSpacing = data.interitemSpace
-            layout.estimatedItemSize = .zero
+            layout.estimatedItemSize = UICollectionViewFlowLayout.automaticSize
             layout.scrollDirection = .horizontal
             
             let collectionView:CustomCollectionView = .init(frame: .init(origin: .zero, size: .init(width: self.frame.width, height: data.height + (data.inset?.top ?? 0) + (data.inset?.bottom ?? 0))), collectionViewLayout: layout)
@@ -197,7 +197,7 @@ extension GenericTableHorizontalSection.Config: UICollectionViewDataSource{
     public func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell:UICollectionViewCell = collectionView.dequeueReusableCell(withReuseIdentifier: getCellReuseIdentifier(), for: indexPath)
         
-        let inset = (collectionView.collectionViewLayout as? UICollectionViewFlowLayout)?.sectionInset
+//        let inset = (collectionView.collectionViewLayout as? UICollectionViewFlowLayout)?.sectionInset
         
         (cell as? GenericTableCollectionViewCell)?.configureCell(item: self.section.getItems()[indexPath.row], height: self.height, collectionView: collectionView, indexPath: indexPath)
         

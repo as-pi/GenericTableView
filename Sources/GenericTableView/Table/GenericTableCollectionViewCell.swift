@@ -66,10 +66,9 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
                     return cell
                 }
             }
-            _ = cell.addData(indexPath: indexPath, size: size)
+            let res = cell.addData(indexPath: indexPath, size: size)
             
             if contentView.frame.size.width != size.width {
-                
                 UIView.performWithoutAnimation {
                     view.reloadItems(at: [indexPath])
                 }
@@ -97,13 +96,11 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
         }
     }
     
-    weak var dataCell:GenericTableDataCellProtocol?
-    
     func configureCell(item:GenericTableDataEquatable, height:CGFloat, collectionView:UICollectionView, indexPath:IndexPath) {
         
-        if self.viewCellReuseIdentifier == item.getCellReuseIdentifier(), let view = contentView.subviews.first as? CustomView, let prevCellView = view.subviews.first(where: {$0 as? GenericTableDataCellProtocol != nil}) as? GenericTableDataCellProtocol {
+        if self.viewCellReuseIdentifier == item.getCellReuseIdentifier(), let view = contentView.subviews.first as? CustomView, let prevCellView = view.subviews.first(where: {$0 as? (any GenericViewXibProtocol) != nil}) as? (any GenericViewXibProtocol), prevCellView.updateData(newData: item) {
+            
             view.indexPath = indexPath
-            prevCellView.updateDataInCell(data: item)
             self.setNeedsLayout()
             self.layoutIfNeeded()
             return
@@ -111,16 +108,13 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
         
         let cell = item.createNewCell()
         
-        cell.alpha = 0
         guard let view = cell.subviews.first?.subviews.first else {print("view is null"); return}
         
         view.removeFromSuperview()
         
         view.translatesAutoresizingMaskIntoConstraints = false
         
-        self.dataCell = cell as? GenericTableDataCellProtocol
-        
-        dataCell?.updateDataInCell(data: item)
+        (cell as? GenericTableDataCellProtocol)?.updateDataInCell(data: item)
         
         let customView:CustomView
         if let view = contentView.subviews.first as? CustomView {
@@ -132,9 +126,12 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
             
             newView.translatesAutoresizingMaskIntoConstraints = false
             
-            newView.afterLayoutFn = {[weak collectionView, weak contentView, weak view] (_, indexPath) in
+            newView.afterLayoutFn = {[weak collectionView, weak contentView, weak cell] (customView, indexPath) in
                 
-                guard let collectionView = collectionView, let contentView = contentView, let size = view?.frame.size, let indexPath = indexPath else {return}
+                guard let collectionView = collectionView, let contentView = contentView, let size = customView.subviews.last?.frame.size, let indexPath = indexPath else {
+                    return
+                }
+                cell?.frame.size = customView.frame.size
                 
                 CellSizes.addData(view: collectionView, contentView: contentView, indexPath: indexPath, size: size)
             }
@@ -153,7 +150,6 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
         
         customView.subviews.forEach {$0.removeFromSuperview()}
         
-        customView.addSubview(cell)
         customView.addSubview(view)
         
         if !isConstraintSetted {
@@ -171,7 +167,6 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
             constraint.priority = .required
             constraint.isActive = true
         }
-        cell.frame.size.height = height
         
         self.layer.masksToBounds = false
         self.viewCellReuseIdentifier = item.getCellReuseIdentifier()

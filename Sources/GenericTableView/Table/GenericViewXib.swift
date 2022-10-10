@@ -18,6 +18,17 @@ extension GenericViewXibProtocol {
     }
 }
 
+extension GenericViewXibProtocol {
+    
+    func updateData(newData: Any) -> Bool {
+        if let data = newData as? ViewToShowConfigType {
+            configure(data: data)
+            return true
+        }
+        return false
+    }
+}
+
 open class GenericViewXib<T:Any>:GenericXibTemplate, GenericViewXibProtocol {
     
     public typealias ViewToShowConfigType = T
