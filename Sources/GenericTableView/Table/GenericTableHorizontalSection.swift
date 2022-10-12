@@ -15,6 +15,9 @@ protocol GenericTableHorizontalSectionProtocol {
 class CustomCollectionView:UICollectionView {
     weak var tableView:UITableView?
     
+    override func layoutSubviews() {
+        super.layoutSubviews()
+    }
     /*
     func reloadDataAfterResize() {
         print("reloadDataAfterResize")
@@ -78,7 +81,7 @@ class GenericTableHorizontalSection:GenericViewXib<GenericTableHorizontalSection
             
             layout.minimumInteritemSpacing = data.interitemSpace
             layout.minimumLineSpacing = data.interitemSpace
-            layout.estimatedItemSize = UICollectionViewFlowLayout.automaticSize
+            layout.estimatedItemSize = .init(width: 1, height: data.height)
             layout.scrollDirection = .horizontal
             
             let collectionView:CustomCollectionView = .init(frame: .init(origin: .zero, size: .init(width: self.frame.width, height: data.height + (data.inset?.top ?? 0) + (data.inset?.bottom ?? 0))), collectionViewLayout: layout)
@@ -180,16 +183,16 @@ extension GenericTableHorizontalSection.Config: UICollectionViewDelegateFlowLayo
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         self.scrollContentOffset = scrollView.contentOffset
     }
-    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        let size:CGSize
-        if let cellSize = GenericTableCollectionViewCell.CellSizes.getData(view: collectionView, indexPath: indexPath) {
-            size = .init(width: cellSize.width, height: self.height)
-            
-        } else {
-            size = .init(width: 1, height: 1)
-        }
-        return size
-    }
+//    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+//        let size:CGSize
+//        if let cellSize = GenericTableCollectionViewCell.CellSizes.getData(view: collectionView, indexPath: indexPath) {
+//            size = .init(width: cellSize.width, height: self.height)
+//            
+//        } else {
+//            size = .init(width: 1, height: 1)
+//        }
+//        return size
+//    }
 }
 
 extension GenericTableHorizontalSection.Config: UICollectionViewDataSource{

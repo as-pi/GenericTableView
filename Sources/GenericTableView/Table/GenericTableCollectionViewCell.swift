@@ -12,6 +12,7 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
     private var viewCellReuseIdentifier:String?
     
     private var isConstraintSetted:Bool = false
+    /*
     class CellSizes {
         private var workItem:DispatchWorkItem?
         private var isFirstLoad:Bool = true
@@ -83,7 +84,7 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
             }
             return cell?.getData(indexPath: indexPath)
         }
-    }
+    }*/
     
     private class CustomView:UIView {
         
@@ -99,7 +100,7 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
     func configureCell(item:GenericTableDataEquatable, height:CGFloat, collectionView:UICollectionView, indexPath:IndexPath) {
         
         if self.viewCellReuseIdentifier == item.getCellReuseIdentifier(), let view = contentView.subviews.first as? CustomView, let prevCellView = view.subviews.first(where: {$0 as? (any GenericViewXibProtocol) != nil}) as? (any GenericViewXibProtocol), prevCellView.updateData(newData: item) {
-            
+
             view.indexPath = indexPath
             self.setNeedsLayout()
             self.layoutIfNeeded()
@@ -126,15 +127,6 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
             
             newView.translatesAutoresizingMaskIntoConstraints = false
             
-            newView.afterLayoutFn = {[weak collectionView, weak contentView, weak cell] (customView, indexPath) in
-                
-                guard let collectionView = collectionView, let contentView = contentView, let size = customView.subviews.last?.frame.size, let indexPath = indexPath else {
-                    return
-                }
-                cell?.frame.size = customView.frame.size
-                
-                CellSizes.addData(view: collectionView, contentView: contentView, indexPath: indexPath, size: size)
-            }
             contentView.addSubview(newView)
             newView.isUserInteractionEnabled = true
             
@@ -142,7 +134,7 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
                 
                 newView.topAnchor.constraint(equalTo: contentView.topAnchor),
                 newView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-                newView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+                contentView.trailingAnchor.constraint(equalTo: newView.trailingAnchor),
                 newView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
             ])
             customView = newView
@@ -155,7 +147,8 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
         if !isConstraintSetted {
             NSLayoutConstraint.activate([
                 view.leadingAnchor.constraint(equalTo: customView.leadingAnchor),
-                view.topAnchor.constraint(equalTo: customView.topAnchor)
+                view.topAnchor.constraint(equalTo: customView.topAnchor),
+                customView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
             ])
             isConstraintSetted = true
         }
@@ -163,6 +156,7 @@ class GenericTableCollectionViewCell: UICollectionViewCell {
         if let viewHeightConstraint = view.heightConstraint {
             viewHeightConstraint.constant = height - 0.5
         } else {
+            contentView.frame.size.height = height
             let constraint = view.heightAnchor.constraint(equalToConstant: height - 0.5)
             constraint.priority = .required
             constraint.isActive = true
