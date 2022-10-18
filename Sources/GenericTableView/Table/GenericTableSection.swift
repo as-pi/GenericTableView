@@ -39,7 +39,7 @@ public protocol GenericTableSectionProtocol:AnyObject {
     
     func getOrientation() -> SectionOrientation
     
-    func onLastItemShow()
+    func onItemShow(_ data: OnShowItemData)
 }
 
 extension GenericTableSection {
@@ -118,21 +118,31 @@ public class HorizontalSectionOrientationConfig {
     var dataSection:GenericTableSection<GenericTableHorizontalSection.Config>!
 }
 
+public protocol OnShowItemData {
+    var index:Int {get}
+    var allCount:Int {get}
+}
+
 public class GenericTableSection<T:GenericTableDataEquatable>:GenericTableSectionProtocol {
     private(set) var config:Config
     public var configFromTable:GenericTableSectionConfigFromTable!
     
     private let queue:DispatchQueue = .init(label: "GenericTableSection-queue", qos: .userInteractive)
     
+//    struct ShowItemData: OnShowItemData {
+//        let index:Int
+//        let allCount:Int
+//    }
+    
     public struct Config {
-        public init(headerView: UIView? = nil, data: [T] = [], animationType: GenericTableView.AnimationType, orientation:SectionOrientation = .vertical, onShowLastItem:((Int) -> Void)? = nil) {
+        public init(headerView: UIView? = nil, data: [T] = [], animationType: GenericTableView.AnimationType, orientation:SectionOrientation = .vertical, onShowItem:((OnShowItemData) -> Void)? = nil) {
             self.headerView = headerView
             self.data = data
             self.animationType = animationType
             self.orientation = orientation
-            self.onShowLastItem = onShowLastItem
+            self.onShowItem = onShowItem
         }
-        var onShowLastItem:((Int) -> Void)?
+        var onShowItem:((OnShowItemData) -> Void)? // index , allCount
         var headerView:UIView?
         var data:[T] = []
         var animationType:GenericTableView.AnimationType
@@ -162,8 +172,8 @@ public class GenericTableSection<T:GenericTableDataEquatable>:GenericTableSectio
         return self.config.headerView
     }
     
-    public func onLastItemShow() {
-        config.onShowLastItem?(getItemCount())
+    public func onItemShow(_ data: OnShowItemData) {
+        config.onShowItem?(data)
     }
     
     public func getItemCount() -> Int {
@@ -503,6 +513,15 @@ private class TableViewUpdates {
         
         toDeleteIndex.filter {toReloadIndex.contains($0)}.forEach({toDeleteIndex.remove($0)})
         newDataIndex.filter {toReloadIndex.contains($0)}.forEach({newDataIndex.remove($0)})
+        
+        toMoveIndex.enumerated()
+            .filter {(index, item) in toDeleteIndex.contains (item.1)}.reversed()
+            .forEach {(index, item) in
+                toReloadIndex.insert(item.1)
+                toDeleteIndex.remove(item.1)
+                toDeleteIndex.insert(item.0)
+                toMoveIndex.remove(at: index)
+        }
         
         toDelete = TableViewUpdateWithDirection(oldData: oldData, newData: newData, toUpdateIndexItemArray: .init(toDeleteIndex))
         toInsert = TableViewUpdateWithDirection(oldData: oldData, newData: newData, toUpdateIndexItemArray: .init(newDataIndex))

@@ -15,13 +15,14 @@ public protocol GenericTableViewProtocol {
     func afterLayout(view:GenericTableView, table:UITableView)
 }
 
-public class GenericTableView:UIView, UITableViewDelegate, UITableViewDataSource {
+public class GenericTableView:UIView, UITableViewDataSource {
     private lazy var serialQueue = DispatchQueue(label: "GenericTableQueue")
+    public weak var delegate: GenericTableViewDelegate?
     
-    public class CustomTableView:UITableView {
-        private var updateQueue:DispatchQueue = .init(label: "CustomTableView-update")
-        private var updateCount:Int = 0
-        private var updateUICount:Int = 0
+    class CustomTableView:UITableView {
+//        private var updateQueue:DispatchQueue = .init(label: "CustomTableView-update")
+//        private var updateCount:Int = 0
+//        private var updateUICount:Int = 0
         
         private(set) var isLayouted:Bool = false
         
@@ -46,61 +47,9 @@ public class GenericTableView:UIView, UITableViewDelegate, UITableViewDataSource
                 }
             }
         }
-        /*
-        public override func beginUpdates() {
-//            print("beginUpdates begin \(Date()) \(hasUncommittedUpdates) \(isLayouted)")
-            updateQueue.sync {
-                updateCount += 1
-//                super.beginUpdates()
-            }
-//            print("beginUpdates updateCount:\(updateCount)")
-            super.beginUpdates()
-        }
-        
-        public override func endUpdates() {
-//            print("beginUpdates end \(Date()) \(hasUncommittedUpdates) \(isLayouted)")
-            updateQueue.sync {
-                updateCount -= 1
-//                super.endUpdates()
-            }
-//            print("endUpdates updateCount:\(updateCount)")
-            super.endUpdates()
-        }*/
-        /*
-        public func beginUpdateUI() {
-//            print("beginUpdates ui begin \(Date()) \(hasUncommittedUpdates) \(isLayouted)")
-            let canUpdate:Bool = updateQueue.sync {
-                if updateCount == 0 && isLayouted {
-                    updateCount += 1
-                    updateUICount += 1
-//                    super.beginUpdates()
-                    return true
-                }
-                return false
-            }
-//            print("beginUpdateUI updateCount:\(updateCount)")
-            if canUpdate {
-                super.beginUpdates()
-            }
-        }
-        public func endUpdateUI() {
-//            print("beginUpdates ui end \(Date()) \(hasUncommittedUpdates) \(isLayouted)")
-            let canUpdate:Bool = updateQueue.sync {
-                updateUICount -= 1
-                if updateCount == 1 {
-                    updateCount = 0
-                    return true
-                }
-                return false
-            }
-//            print("endUpdateUI updateCount:\(updateCount)")
-            if canUpdate {
-                super.endUpdates()
-            }
-        }*/
     }
     
-    private var tableViewCreationClosure: ((CustomTableView) -> Void)?
+    private var tableViewCreationClosure: ((UITableView) -> Void)?
 
     private var observers:NSHashTable<GenericTableViewProtocol> = .init(options: .weakMemory)
     
@@ -111,17 +60,6 @@ public class GenericTableView:UIView, UITableViewDelegate, UITableViewDataSource
         observers.remove(object)
     }
     
-//    private enum LocalStringData:String{
-//        case loadingState = "Обновление"
-//        case releaseToRefresh = "Отпустите"
-//        case pullToRefresh = "Потяните вниз"
-//    }
-    
-//    public enum Orientation {
-//        case vertical
-//        case horizontal
-//    }
-    
     public enum AnimationType {
         case none
         case auto
@@ -129,10 +67,20 @@ public class GenericTableView:UIView, UITableViewDelegate, UITableViewDataSource
         func getAnimationType(animation:UITableView.RowAnimation)->UITableView.RowAnimation {
             switch self {
             case .auto:
-                return animation
+                return .automatic
             default:
                 return .none
             }
+        }
+    }
+    
+    public var table:UITableView? {
+        if let tableView = tableView {
+            return tableView
+        } else {
+            self.setNeedsLayout()
+            self.layoutIfNeeded()
+            return tableView
         }
     }
     
@@ -149,29 +97,6 @@ public class GenericTableView:UIView, UITableViewDelegate, UITableViewDataSource
     private var canScroll:Bool = true
     private var tableViewHeightConstraint:NSLayoutConstraint?
     
-    /*
-    var hasRefresher:Bool = false{
-        didSet{
-            if (hasRefresher){
-                _ = refreshView
-            }
-            
-        }
-    }
-    
-    private lazy var refreshViewAnimator:ESRefreshHeaderAnimator = {
-        let t = ESRefreshHeaderAnimator()
-        t.loadingDescription = LocalStringData.loadingState.rawValue
-        t.releaseToRefreshDescription = LocalStringData.releaseToRefresh.rawValue
-        t.pullToRefreshDescription = LocalStringData.pullToRefresh.rawValue
-        return t
-    }();
-    private lazy var refreshView:ESRefreshHeaderView = {
-        let tt = tableView.es.addPullToRefresh(animator: refreshViewAnimator, handler: {[weak self] in
-            self?.refreshItemsMethod?();
-        })
-        return tt;
-    }()*/
     public struct UpdateSet:Hashable {
         let sectionNo:Int
         let index:Int
@@ -230,7 +155,7 @@ public class GenericTableView:UIView, UITableViewDelegate, UITableViewDataSource
         emptyDataViewType: V.Type? = EmptyDataView.self as? V.Type,
         config: Config,
         canScroll: Bool = true,
-        tableViewCreationClosure: ((CustomTableView) -> Void)? = nil
+        tableViewCreationClosure: ((UITableView) -> Void)? = nil
     ) -> GenericTableView {
         let table = GenericTableView()
         table.tableViewCreationClosure = tableViewCreationClosure
@@ -314,7 +239,17 @@ public class GenericTableView:UIView, UITableViewDelegate, UITableViewDataSource
     }
     var isLoading:Bool = false
     
-    private var tableDataInUpdating:Bool = false
+    private var _tableDataInUpdating:Bool = false
+    private var _tableDataInUpdatingQueue:DispatchQueue = .init(label: "_tableDataInUpdatingQueue")
+    
+    var tableDataInUpdating:Bool {
+        get {
+            return _tableDataInUpdatingQueue.sync {return _tableDataInUpdating}
+        }
+        set {
+            _tableDataInUpdatingQueue.sync {_tableDataInUpdating = newValue}
+        }
+    }
     
     private func createTableView() {
         let table = CustomTableView(frame: CGRect.zero)
@@ -386,22 +321,6 @@ public class GenericTableView:UIView, UITableViewDelegate, UITableViewDataSource
         tableView.allowsSelection = false
 //        print("create table view:\(tableView)")
         tableView.sectionHeaderHeight = UITableView.automaticDimension
-        
-//        if (config.orientation == .horizontal) {
-//            tableView.transform = CGAffineTransform(rotationAngle: -.pi / 2 )
-//        }
-    }
-    
-    public func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
-        
-        if (indexPath.section == config.sections.count && indexPath.row == (config.sections[config.sections.count - 1].getItemCount() - 1) && /*!isLoading && */ !tableDataInUpdating && loadMoreItemsMethod != nil) {
-            loadMoreItemsMethod?(config.sections[config.sections.count - 1].getItemCount())
-        }
-        if let section = (config.sections.count >= indexPath.section ? config.sections[indexPath.section] : nil), indexPath.row == (section.getItemCount() - 1) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: {[weak section] in
-                section?.onLastItemShow()
-            })
-        }
         
     }
     
@@ -519,44 +438,6 @@ public class GenericTableView:UIView, UITableViewDelegate, UITableViewDataSource
         }
     }
     
-    public func numberOfSections(in tableView: UITableView) -> Int {
-        let sectionCount = self.config?.sections.count ?? 0
-        return sectionCount
-    }
-    
-    public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        if section < self.config.sections.count {
-            
-            let section = self.config.sections[section]
-//            if case .horizontal(let data) = self.config.sections[section].getOrientation() {
-////
-//            }
-            return section.getItemCount()
-        }
-        return 0
-    }
-    
-    public func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        let hasHeader = (section < self.config.sections.count) ? self.config.sections[section].getHeaderView() != nil : false
-//        print("heightForHeaderInSection (\(section)):\(hasHeader)")
-        return hasHeader ? UITableView.automaticDimension : 0
-    }
-    
-    public func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-        let headerView = (section < self.config.sections.count) ? self.config.sections[section].getHeaderView() : nil
-//        print("viewForHeaderInSection: (\(section))\(headerView)")
-        return headerView
-        
-    }
-    
-    public func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        let sectionNo:Int = indexPath.section
-        if (sectionNo < self.config.sections.count && self.config.sections[sectionNo].isItemHasEmptyView(row: indexPath.row)) {
-            return 0
-        }
-        return UITableView.automaticDimension
-    }
-    
     public func reloadTableData(set:Set<UpdateSet>) {
         if (!Thread.current.isMainThread) {
             DispatchQueue.main.sync {[weak self] in
@@ -572,16 +453,6 @@ public class GenericTableView:UIView, UITableViewDelegate, UITableViewDataSource
             uiTableView.reloadRows(at: indexPaths, with: .middle)
         }
         updateTableDataWithAnimation(method: updateAction, beforeUpdate: nil)
-    }
-    
-    public func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let index:Int = indexPath.row
-        let sectionNo:Int = indexPath.section
-        var cell:UITableViewCell?
-        if (sectionNo < self.config.sections.count) {
-            cell = self.config.sections[sectionNo].getReusableCellForRow(tableView: tableView, row: index)
-        }
-        return cell ?? UITableViewCell()
     }
     
     private func updateTableDataWithAnimation(hasAnimation: Bool = true, method:@escaping((UITableView) -> Void),beforeUpdate:(() -> Void)?, res:(() -> Void)? = nil) {
@@ -613,37 +484,28 @@ public class GenericTableView:UIView, UITableViewDelegate, UITableViewDataSource
                             }
                         }
                         beforeUpdate?()
+                        let group:DispatchGroup = .init()
                         let fn = {[weak tableView = ss.tableView] in
-                            guard let tableView = tableView else {return}
-                            tableView.beginUpdates()
-                            for method in methods {
-                                
-                                method(tableView)
-                                
-                            }
-                            tableView.endUpdates()
+                            guard let tableView = tableView else {resMethod(); return}
+                            group.enter()
+                            tableView.performBatchUpdates({
+                                for method in methods {
+                                    method(tableView)
+                                }
+                            }, completion: {res in
+                                group.leave()
+                            })
                         }
                         if hasAnimation {
-                            UIView.animate(withDuration: 0, animations: {
-                                                        
-                                fn()
-                                
-                            }, completion: { res in
-                                DispatchQueue.global().asyncAfter(deadline: .now() + 0.1, execute: {
-                                    resMethod()
-                                })
-                            })
+                            fn()
                         } else {
                             UIView.performWithoutAnimation {
-                                
                                 fn()
-                                
-                                DispatchQueue.global().asyncAfter(deadline: .now() + 0.1, execute: {
-                                    resMethod()
-                                })
                             }
                         }
-                        
+                        group.notify(queue: .global(), execute: {
+                            resMethod()
+                        })
                         
                         /*
                         CATransaction.begin()
