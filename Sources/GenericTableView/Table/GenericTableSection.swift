@@ -523,6 +523,15 @@ private class TableViewUpdates {
                 toMoveIndex.remove(at: index)
         }
         
+        toMoveIndex.enumerated()
+            .filter {newDataIndex.contains($0.element.0)}.reversed()
+            .forEach {(index, item) in
+                toReloadIndex.insert(item.0)
+                newDataIndex.remove(item.0)
+                newDataIndex.insert(item.1)
+                toMoveIndex.remove(at: index)
+            }
+        
         toDelete = TableViewUpdateWithDirection(oldData: oldData, newData: newData, toUpdateIndexItemArray: .init(toDeleteIndex))
         toInsert = TableViewUpdateWithDirection(oldData: oldData, newData: newData, toUpdateIndexItemArray: .init(newDataIndex))
         toReload = TableViewUpdateWithDirection(oldData: oldData, newData: newData, toUpdateIndexItemArray: .init(toReloadIndex))
